@@ -1,3 +1,7 @@
+# Examining the (time-space-insensitive) Apple Mobility data
+
+# Code by Michael Fichman - mfichman@upenn.edu, michael-fichman.com
+
 # Load libraries
 
 library(tidyverse)
@@ -59,68 +63,3 @@ ggplot(apple %>%
        x="Date", 
        y="Pct Change in Volume")+
   plotTheme
-
-
-### Philadelphia Bike Share Q2, 2021
-
-url <-"https://u626n26h74f16ig1p3pt0f2g-wpengine.netdna-ssl.com/wp-content/uploads/2021/07/indego-trips-2021-q2.zip"
-
-temp <- tempfile()
-temp2 <- tempfile()
-
-download.file(url, temp)
-unzip(zipfile = temp, exdir = temp2)
-dat <- read.csv(file.path(temp2, "indego-trips-2021-q2.csv"))
-
-unlink(c(temp, temp2))
-
-phila_shp <- counties("PA") %>%
-  filter(NAME == "Philadelphia") %>%
-  st_as_sf(crs = 4326)
-
-## Bin observations by time
-
-dat2 <- dat %>%
-  mutate(interval60 = floor_date(mdy_hm(start_time), unit = "hour"),
-         interval15 = floor_date(mdy_hm(start_time), unit = "15 mins"),
-         week = week(interval60),
-         dotw = wday(interval60, label=TRUE))
-
-
-# Look at the nature of the data - raw data
-
-glimpse(dat2)
-
-# Look at the whole time-series
-
-ggplot(dat2 %>%
-         group_by(interval60) %>%
-         tally())+
-  geom_line(aes(x = interval60, y = n))+
-  labs(title="Bike share trips per hr. Philadelphia, Q2, 2021",
-       x="Date", 
-       y="Number of trips")+
-  plotTheme
-
-# Look at daily and hourly time patterns
-
-ggplot(dat2 %>% mutate(hour = hour(mdy_hm(start_time))))+
-  geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
-  labs(title="Bike share trips in Philadelphia, by day of the week, Q2, 2021",
-       x="Hour", 
-       y="Trip Counts")+
-  plotTheme
-
-# Look at time-space patterns
-
-ggplot(dat2 %>%
-         mutate(time_of_day = ifelse(hour(interval60) < 4 | hour(interval60) > 20, "Night", "Day"))%>%
-         group_by(start_station, time_of_day, start_lon, start_lat) %>%
-         tally() %>%
-         filter(time_of_day == "Night"))+
-  geom_sf(data = phila_shp)+
-  geom_point(aes(x = start_lon, y = start_lat, color = n), alpha = 0.6)+
-  scale_color_viridis_c(breaks = c(700, 350, 1), labels = c("700", "350", "0"))+
-  guides(color=guide_legend(title="Trips"))+
-  labs(title="Gross Bike Share Trips By Origin - 20:00-4:00, Q2, 2021")+
-  mapTheme
