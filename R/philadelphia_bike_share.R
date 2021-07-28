@@ -62,6 +62,10 @@ phila_shp <- counties("PA") %>%
   filter(NAME == "Philadelphia") %>%
   st_as_sf(crs = 4326)
 
+## View one row of data
+
+dat %>% slice(1) %>% View()
+
 ## Bin observations by time
 
 dat2 <- dat %>%
@@ -82,8 +86,8 @@ ggplot(dat2 %>%
          tally())+
   geom_line(aes(x = interval60, y = n))+
   labs(title="Bike share trips per hr. Philadelphia, Q2, 2021",
-       x="Date", 
-       y="Number of trips")+
+       x="Date (2021)", 
+       y="Trips per hour")+
   plotTheme
 
 # Look at daily and hourly time patterns
@@ -92,7 +96,7 @@ ggplot(dat2 %>% mutate(hour = hour(mdy_hm(start_time))))+
   geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
   labs(title="Bike share trips in Philadelphia, by day of the week, Q2, 2021",
        x="Hour", 
-       y="Trip Counts")+
+       y="Trips")+
   plotTheme
 
 # Look at time-space patterns
@@ -104,7 +108,7 @@ ggplot(dat2 %>%
          filter(time_of_day == "Night"))+
   geom_sf(data = phila_shp)+
   geom_point(aes(x = start_lon, y = start_lat, color = n), alpha = 0.6)+
-  scale_color_viridis_c(breaks = c(700, 350, 1), labels = c("700", "350", "0"))+
+  scale_color_viridis_c()+
   guides(color=guide_legend(title="Trips"))+
   labs(title="Gross Bike Share Trips By Origin - 20:00-4:00, Q2, 2021")+
   mapTheme
