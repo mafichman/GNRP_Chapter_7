@@ -90,20 +90,59 @@ ggplot(dat2 %>%
        y="Trips per hour")+
   plotTheme
 
+# Average daily trips
+
+dat2 %>%
+  mutate(day = yday(mdy_hm(start_time))) %>%
+  group_by(day) %>%
+  tally() %>%
+  summarize(mean_trips = mean(n))
+
+# Average daily trips by month
+
+dat2 %>%
+  mutate(day = yday(mdy_hm(start_time)),
+         month = month(mdy_hm(start_time))) %>%
+  group_by(month, day) %>%
+  tally() %>%
+  group_by(month)%>%
+  summarize(mean_trips = mean(n))
+
 # Look at daily and hourly time patterns
 
-ggplot(dat2 %>% mutate(hour = hour(mdy_hm(start_time))))+
-  geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
-  labs(title="Bike share trips in Philadelphia, by day of the week, Q2, 2021",
+ggplot(dat2 %>% mutate(hour = hour(mdy_hm(start_time)),
+                       month = month(mdy_hm(start_time)),
+                       day_type = ifelse(dotw %in% c("Sat", "Sun", "Fri"), "Weekend", "Weekday"),
+                       month = case_when(month == 4 ~ "4-2021",
+                                         month == 5 ~ "5-2021",
+                                         month == 6 ~ "6-2021")))+
+  geom_rect(aes(xmin=0,
+                xmax = 6,
+                ymin = 0,
+                ymax = Inf), fill = 'light grey', alpha = 0.05)+
+  geom_rect(aes(xmin=18,
+                xmax = 24,
+                ymin = 0,
+                ymax = Inf), fill = 'light grey', alpha = 0.05)+
+  geom_freqpoly(aes(hour, color = day_type), binwidth = 1)+
+  scale_x_continuous(name="Hour", breaks=seq(0,24,6))+
+  labs(title="Total Bike Share Trips",
+       subtitle = "Philadelphia, Q2, 2021",
        x="Hour", 
        y="Trips")+
+  facet_wrap(~month)+
+  theme(legend.title = element_blank())+
   plotTheme
 
 # Look at time-space patterns
 
 ggplot(dat2 %>%
-         mutate(time_of_day = ifelse(hour(interval60) < 4 | hour(interval60) > 20, "Night", "Day"))%>%
-         group_by(start_station, time_of_day, start_lon, start_lat) %>%
+         mutate(time_of_day = ifelse(hour(interval60) < 4 | hour(interval60) > 20, "Night", "Day"),
+                month = month(mdy_hm(start_time)),
+                month = case_when(month == 4 ~ "4-2021",
+                                  month == 5 ~ "5-2021",
+                                  month == 6 ~ "6-2021"))%>%
+         group_by(start_station, time_of_day, start_lon, start_lat, month) %>%
          tally() %>%
          filter(time_of_day == "Night"))+
   geom_sf(data = phila_shp)+
@@ -111,4 +150,5 @@ ggplot(dat2 %>%
   scale_color_viridis_c()+
   guides(color=guide_legend(title="Trips"))+
   labs(title="Gross Bike Share Trips By Origin - 20:00-4:00, Q2, 2021")+
+  facet_wrap(~month)+
   mapTheme
