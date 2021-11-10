@@ -145,8 +145,8 @@ ggplot(dat2 %>%
          group_by(start_station, time_of_day, start_lon, start_lat, month) %>%
          tally() %>%
          filter(time_of_day == "Night"))+
-  geom_sf(data = phila_shp)+
-  geom_point(aes(x = start_lon, y = start_lat, color = n), alpha = 0.6)+
+  geom_sf(data = phila_shp, fill = "black")+
+  geom_point(aes(x = start_lon, y = start_lat, color = n), alpha = 0.8)+
   scale_color_viridis_c()+
   guides(color=guide_legend(title="Trips"))+
   labs(title="Gross Bike Share Trips By Origin - 20:00-4:00, Q2, 2021")+
