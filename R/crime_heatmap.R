@@ -73,7 +73,7 @@ philaCounty <- counties(state = "PA") %>%
 
 fishnet <- 
   st_make_grid(philaCounty,
-               cellsize = 1000, 
+               cellsize = 1320, 
                square = TRUE) %>%
   .[philaCounty] %>%            # <- MDH Added
   st_sf() %>%
@@ -98,7 +98,8 @@ ggplot()+
   geom_sf(data = philaLicenses %>%
             filter(str_detect(licensetype, paste(c("Food Estab", "Cafe", "Assembly"),collapse = '|')) == TRUE,
                    licensestatus != "Inactive") %>%
-            st_transform(crs = 2272), color = "red", alpha = 0.6)
+            st_transform(crs = 2272), 
+          color = "red", alpha = 0.5, size = 0.5)
 
 # Look at the 1st Council District Only
 
@@ -122,27 +123,25 @@ ggplot()+
           color = "red", size = 0.5, alpha = 0.6)
 
 
-#get a basemap
+#get a basemap and map the 1st district
 # This is an alternative to get_map from the original code
 # the buffer for the bbox and the zoom are specified here
 base_map <- get_stamenmap(bbox = unname(st_bbox(ll(st_buffer(st_centroid(councilDistricts %>% 
-                                                                           filter(DISTRICT == 1)),20000)))),
-                          force = TRUE, maptype = "toner-lite", zoom = 13)
+                                                                           filter(DISTRICT %in% c( 1,5))),23000)))),
+                          force = TRUE, maptype = "terrain", zoom = 13)
 
-ggmap(base_map)+
- geom_sf(data = councilDistricts %>% 
-                      filter(DISTRICT == 1) %>%
-           st_transform(crs = 4326), inherit.aes = FALSE) +
- mapTheme
-
-
-ggmap(base_map)+ geom_sf(data = philaLicenses %>%
+ggmap(base_map)+ 
+  geom_sf(data = councilDistricts %>% 
+            filter(DISTRICT %in% c( 1,5)) %>%
+            st_transform(crs = 4326), inherit.aes = FALSE,
+          fill = "transparent", color = "blue", size = .75, alpha = 0.4) +
+  geom_sf(data = philaLicenses %>%
                                      filter(str_detect(licensetype, 
                                                        paste(c("Food Estab", "Cafe", "Assembly"),collapse = '|')) == TRUE,
                                             licensestatus != "Inactive") %>%
                                      st_transform(crs = 2272) %>%
                                      st_intersection(., councilDistricts %>% 
-                                                       filter(DISTRICT == 1)) %>%
+                                                       filter(DISTRICT %in% c( 1,5))) %>%
                            st_transform(crs = 4326),
                          inherit.aes = FALSE,
                          color = "red", size = 0.5, alpha = 0.6)
@@ -150,25 +149,29 @@ ggmap(base_map)+ geom_sf(data = philaLicenses %>%
 
 ggmap(base_map)+ 
   geom_sf(data = councilDistricts %>% 
-            filter(DISTRICT == 1) %>%
+            filter(DISTRICT %in% c( 1,5)) %>%
             st_transform(crs = 4326), inherit.aes = FALSE,
           fill = "transparent", color = "blue", size = 1, alpha = 0.4) +
   geom_sf(data = st_intersection(crime_net, councilDistricts %>% 
-                                                  filter(DISTRICT == 1)) %>%
+                                                  filter(DISTRICT %in% c( 1,5))) %>%
                          #  filter(countAssaults > 0) %>%
                            st_transform(crs = 4326),
                          inherit.aes = FALSE,
-                         aes(fill = countAssaults), 
-                         color = "transparent", alpha = 0.7)+
-  scale_fill_viridis_c(option="magma")+
+                         aes(fill = countAssaults*4), 
+                           color = "transparent", alpha = 0.7)+
+  scale_fill_viridis_c()+
+  guides(fill=guide_legend(title="Reported Assaults/\nsquare mile\n6PM-6AM, 2021"))+
   geom_sf(data = philaLicenses %>%
             filter(str_detect(licensetype, 
                               paste(c("Food Estab", "Cafe", "Assembly"),collapse = '|')) == TRUE,
                    licensestatus != "Inactive") %>%
-            st_transform(crs = 2272) %>%
+           st_transform(crs = 2272) %>%
             st_intersection(., councilDistricts %>% 
-                              filter(DISTRICT == 1)) %>%
-            st_transform(crs = 4326),
+                              filter(DISTRICT %in% c( 1,5))) %>%
+            st_transform(crs = 4326) %>%
+            mutate(establishment = "Licensed Establishment"),
           inherit.aes = FALSE,
-          color = "green", size = 0.5, alpha = 0.6)+
+         aes(color = establishment), 
+          size = 0.5, alpha = 0.4)+
+  scale_color_manual(values = c("Licensed Establishment" = "red"))+ 
   mapTheme
