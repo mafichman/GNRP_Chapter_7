@@ -127,12 +127,12 @@ ggplot()+
 # This is an alternative to get_map from the original code
 # the buffer for the bbox and the zoom are specified here
 base_map <- get_stamenmap(bbox = unname(st_bbox(ll(st_buffer(st_centroid(councilDistricts %>% 
-                                                                           filter(DISTRICT %in% c( 1,5))),23000)))),
+                                                                           filter(DISTRICT %in% c( 1, 3, 5))),20000)))),
                           force = TRUE, maptype = "terrain", zoom = 13)
 
 ggmap(base_map)+ 
   geom_sf(data = councilDistricts %>% 
-            filter(DISTRICT %in% c( 1,5)) %>%
+            filter(DISTRICT %in% c( 1, 3, 5)) %>%
             st_transform(crs = 4326), inherit.aes = FALSE,
           fill = "transparent", color = "blue", size = .75, alpha = 0.4) +
   geom_sf(data = philaLicenses %>%
@@ -141,37 +141,50 @@ ggmap(base_map)+
                                             licensestatus != "Inactive") %>%
                                      st_transform(crs = 2272) %>%
                                      st_intersection(., councilDistricts %>% 
-                                                       filter(DISTRICT %in% c( 1,5))) %>%
+                                                       filter(DISTRICT %in% c( 1, 3, 5))) %>%
                            st_transform(crs = 4326),
                          inherit.aes = FALSE,
                          color = "red", size = 0.5, alpha = 0.6)
 
 
 ggmap(base_map)+ 
-  geom_sf(data = councilDistricts %>% 
-            filter(DISTRICT %in% c( 1,5)) %>%
-            st_transform(crs = 4326), inherit.aes = FALSE,
-          fill = "transparent", color = "blue", size = 1, alpha = 0.4) +
   geom_sf(data = st_intersection(crime_net, councilDistricts %>% 
-                                                  filter(DISTRICT %in% c( 1,5))) %>%
+                                                  filter(DISTRICT %in% c( 1,2, 3, 5))) %>%
                          #  filter(countAssaults > 0) %>%
                            st_transform(crs = 4326),
                          inherit.aes = FALSE,
                          aes(fill = countAssaults*4), 
                            color = "transparent", alpha = 0.7)+
-  scale_fill_viridis_c()+
-  guides(fill=guide_legend(title="Reported Assaults/\nsquare mile\n6PM-6AM, 2021"))+
-  geom_sf(data = philaLicenses %>%
+  scale_fill_viridis_c("Reported Assaults/\nsquare mile")+
+  #guides(fill=guide_legend(title="Assaults/\nMi^2"))+
+  geom_point(data = philaLicenses %>%
             filter(str_detect(licensetype, 
                               paste(c("Food Estab", "Cafe", "Assembly"),collapse = '|')) == TRUE,
                    licensestatus != "Inactive") %>%
            st_transform(crs = 2272) %>%
             st_intersection(., councilDistricts %>% 
-                              filter(DISTRICT %in% c( 1,5))) %>%
+                              filter(DISTRICT %in% c( 1,2, 3, 5))) %>%
             st_transform(crs = 4326) %>%
-            mutate(establishment = "Licensed Establishment"),
+            mutate(lon=map_dbl(geometry, ~st_centroid(.x)[[1]]), # add centroid values for labels
+                   lat=map_dbl(geometry, ~st_centroid(.x)[[2]])) %>%
+            mutate(establishment = "Licensed Establishment") %>%
+             as.data.frame(),
           inherit.aes = FALSE,
-         aes(color = establishment), 
-          size = 0.5, alpha = 0.4)+
-  scale_color_manual(values = c("Licensed Establishment" = "red"))+ 
+         aes(y = lat, x = lon, color = establishment), 
+          size = 0.3, alpha = 0.3)+
+  scale_color_manual(values = c("Licensed Establishment" = "red"), "")+ 
+  geom_sf(data = councilDistricts %>% 
+            filter(DISTRICT %in% c( 1,2,3, 5)) %>%
+            st_transform(crs = 4326), inherit.aes = FALSE,
+          fill = "transparent", color = "black", size = .5) +
+  geom_text(data = councilDistricts %>% 
+              filter(DISTRICT %in% c( 1,2, 3, 5)) %>%
+              st_transform(crs = 4326) %>%
+              mutate(lon=map_dbl(geometry, ~st_centroid(.x)[[1]]), # add centroid values for labels
+                     lat=map_dbl(geometry, ~st_centroid(.x)[[2]]),
+                     name = paste("District\n", DISTRICT)) %>%
+              as.data.frame(),
+    aes(y = lat, x = lon, label = name), color = "black")+
+  labs(title="Reported 6PM-6AM Assaults In Central Philadelphia Council Districts, 2021\nLicensed food and assembly establishments in red.",
+       subtitle = "Data: City of Philadelphia, Philadelphia Police Department, Basemap - Open Street Map")+
   mapTheme
